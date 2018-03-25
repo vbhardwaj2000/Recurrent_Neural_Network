@@ -66,7 +66,7 @@ def get_word_embeddings(embedding_size = 50):
     vocabulary = ["--UNK--"]
     embeddings = [EMPTY_EMBEDDING]
     print("Loading embeddings to memory")
-    with open("data/glove.6B.{}d.txt".format(embedding_size), "r") as f:
+    with open("data/glove.6B.{}d.txt".format(embedding_size), "r", encoding='utf-8') as f:
         for line in f:
             v, e = line.split(" ", 1)
             e = list(map(float, e.split()))
@@ -100,12 +100,10 @@ def get_sentence_batch(vocabulary, batch_size, is_eval):
     batch_data_filenames.extend(random.sample(file_lists[is_eval_string]["neg"], neg_size))
     batch_data_filenames.extend(random.sample(file_lists[is_eval_string]["pos"], pos_size))
 
-    has_letters = re.compile('[a-z]')
-
     batch_data = []
     batch_data_strings = []
     for filename in batch_data_filenames:
-        with open(filename, "r") as f:
+        with filename.open() as f:
             text = f.read().split()
             word_ids = []
             string = []

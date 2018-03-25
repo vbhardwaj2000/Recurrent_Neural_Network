@@ -14,9 +14,15 @@ vocabulary, all_embeddings = data_utils.get_word_embeddings(embedding_size)
 
 word_ids_placeholder = tf.placeholder(tf.int32, [None, data_utils.FIXED_STRING_LENGTH])
 word_embeddings_tensor = tf.constant(all_embeddings)
+embeddings_tensor = tf.nn.embedding_lookup(word_embeddings_tensor, word_ids_placeholder)
 
 # TODO build model
 
+rnn_layers = [tf.nn.rnn_cell.LSTMCell(size) for size in [128, 256, 256]]
+
+mutli_rnn_cell = tf.nn.rnn_cell.MultiRNNCell(rnn_layers)
+
+outputs, state = tf.nn.dynamic_rnn(cell=mutli_rnn_cell, inputs=embeddings_tensor, dtype=tf.float32)
 
 ## Logit layer
 logits = tf.layers.dense(outputs[:, -1, :], 2)
@@ -43,7 +49,7 @@ saver = tf.train.Saver()
 ## Make tensorflow session
 with tf.Session() as sess:
     training_summary_writer = tf.summary.FileWriter(TENSORBOARD_LOGDIR + "/training", sess.graph)
-    test_summary_writer = tf.summary.FileWriter(TENSORBOARD_LOGDIR + "/test" , sess.graph)
+    test_summary_writer = tf.summary.FileWriter(TENSORBOARD_LOGDIR + "/test", sess.graph)
 
     ## Initialize variables
     sess.run(tf.global_variables_initializer())
@@ -68,15 +74,15 @@ with tf.Session() as sess:
         print("pos", batch_training_string[-1])
 
         # train network
-        training_accuracy, training_loss, summary,  _ = sess.run([accuracy, loss, summary_tensor, train],
-                                                                 feed_dict={word_ids_placeholder: batch_training_data,
-                                                                         label_placeholder: batch_training_labels})
+        training_accuracy, training_loss, summary, _ = sess.run([accuracy, loss, summary_tensor, train],
+                                                                feed_dict={word_ids_placeholder: batch_training_data,
+                                                                           label_placeholder: batch_training_labels})
 
         # write data to tensorboard
         training_summary_writer.add_summary(summary, step_count)
 
         # every 10 steps check accuracy
-        if step_count % 10 ==  0:
+        if step_count % 10 == 0:
             batch_test_data, batch_test_labels, batch_test_string = data_utils.get_sentence_batch(
                 vocabulary=vocabulary,
                 batch_size=50,
@@ -94,7 +100,6 @@ with tf.Session() as sess:
             print("Step Count:{}".format(step_count))
             print("Training accuracy: {:.6f} loss: {:.6f}".format(training_accuracy, training_loss))
             print("Test accuracy: {:.6f} loss: {:.6f}".format(test_accuracy, test_loss))
-
 
         if step_count % 100 == 0:
             save_path = saver.save(sess, "model/model.ckpt")
